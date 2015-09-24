@@ -72,9 +72,9 @@ def move_knight(own_position, free_position):
     x = own_position[0]
     y = own_position[1]
 
-    possible_positions = [(x - 1, y - 2), (x - 1, y - 2),  # UP
+    possible_positions = [(x + 1, y - 2), (x - 1, y - 2),  # UP
                           (x + 1, y + 2), (x - 1, y + 2),  # DOWN
-                          (x - 2, y + 1), (x - 2, y + 1),  # LEFT
+                          (x - 2, y + 1), (x - 2, y - 1),  # LEFT
                           (x + 2, y - 1), (x + 2, y + 1)]  # RIGHT
     if free_position in possible_positions:
         return True
@@ -93,16 +93,25 @@ class Piece(object):
         self.move_function = move_function
         self.is_queen = is_queen
 
-    def draw(self, offset_x=0, offset_y=0):
+    def draw(self, goal_location, offset_x=0, offset_y=0):
         if self.is_queen:
             self.scr.addstr(self.location[1] + offset_y,
                             self.location[0] + offset_x,
                             self.symbol,
                             curses.color_pair(1))
+
+        elif self.location == goal_location:
+            self.scr.addstr(self.location[1] + offset_y,
+                            self.location[0] + offset_x,
+                            self.symbol,
+                            curses.color_pair(2))
+
         else:
             self.scr.addstr(self.location[1] + offset_y,
                             self.location[0] + offset_x,
-                            self.symbol)
+                            self.symbol,
+                            curses.color_pair(3))
+
 
     def move(self, free_position):
         return self.move_function(self.location, free_position)
@@ -132,32 +141,32 @@ class ChessBoard(object):
                 locations.append((x, y))
         random.shuffle(locations)
         self.starting_location = locations[0]
-        self.pieces.append(Piece(self.scr, locations[0], '♛', move_queen, True))
-        self.pieces.append(Piece(self.scr, locations[1], '♚', move_king))
-        self.pieces.append(Piece(self.scr, locations[2], '♚', move_king))
-        self.pieces.append(Piece(self.scr, locations[3], '♜', move_rook))
-        self.pieces.append(Piece(self.scr, locations[4], '♜', move_rook))
-        self.pieces.append(Piece(self.scr, locations[5], '♜', move_rook))
-        self.pieces.append(Piece(self.scr, locations[6], '♜', move_rook))
-        self.pieces.append(Piece(self.scr, locations[7], '♞', move_knight))
-        self.pieces.append(Piece(self.scr, locations[8], '♞', move_knight))
-        self.pieces.append(Piece(self.scr, locations[9], '♞', move_knight))
-        self.pieces.append(Piece(self.scr, locations[10], '♞', move_knight))
-        self.pieces.append(Piece(self.scr, locations[11], '♝', move_bishop))
-        self.pieces.append(Piece(self.scr, locations[12], '♝', move_bishop))
-        self.pieces.append(Piece(self.scr, locations[13], '♝', move_bishop))
-        self.pieces.append(Piece(self.scr, locations[14], '♝', move_bishop))
+        self.pieces.append(Piece(self.scr, locations[0], 'Q', move_queen, True))
+        self.pieces.append(Piece(self.scr, locations[1], 'K', move_king))
+        self.pieces.append(Piece(self.scr, locations[2], 'K', move_king))
+        self.pieces.append(Piece(self.scr, locations[3], 'r', move_rook))
+        self.pieces.append(Piece(self.scr, locations[4], 'r', move_rook))
+        self.pieces.append(Piece(self.scr, locations[5], 'r', move_rook))
+        self.pieces.append(Piece(self.scr, locations[6], 'r', move_rook))
+        self.pieces.append(Piece(self.scr, locations[7], 'k', move_knight))
+        self.pieces.append(Piece(self.scr, locations[8], 'k', move_knight))
+        self.pieces.append(Piece(self.scr, locations[9], 'k', move_knight))
+        self.pieces.append(Piece(self.scr, locations[10], 'k', move_knight))
+        self.pieces.append(Piece(self.scr, locations[11], 'b', move_bishop))
+        self.pieces.append(Piece(self.scr, locations[12], 'b', move_bishop))
+        self.pieces.append(Piece(self.scr, locations[13], 'b', move_bishop))
+        self.pieces.append(Piece(self.scr, locations[14], 'b', move_bishop))
 
         self.free_space = locations[15]
 
     def draw_board(self):
         columns = ['a', 'b', 'c', 'd']
         for idx, column_name in enumerate(columns):
-            self.scr.addstr(0, idx + self.offset_x, column_name)
+            self.scr.addstr(0, idx + self.offset_x, column_name, curses.color_pair(4))
         for idx in range(self.height):
-            self.scr.addstr(idx + self.offset_y, 0, str(idx))
+            self.scr.addstr(idx + self.offset_y, 0, str(idx), curses.color_pair(4))
         for piece in self.pieces:
-            piece.draw(offset_x=1, offset_y=1)
+            piece.draw(self.goal_location, offset_x=1, offset_y=1)
 
     def move(self, move):
         for idx, piece in enumerate(self.pieces):
@@ -207,11 +216,26 @@ def parse_move(move):
     return column, row
 
 
+def check_for_victory(board):
+    for piece in board.pieces:
+        if piece.is_queen:
+            break
+    if piece.location == board.goal_location:
+        return True
+    else:
+        return False
+
+
 def main(scr):
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_WHITE)
     board = ChessBoard(scr)
     curses.echo()
-    while True:
+
+    running = True
+    while running:
         scr.clear()
         board.draw_board()
         time.sleep(.5)
@@ -222,6 +246,10 @@ def main(scr):
             board.move(move)
         else:
             popup(scr, 'Invalid move!')
+        if check_for_victory(board):
+            popup(scr, 'YOU ARE VICTORY!')
+            running = False
+
         scr.refresh()
 
 if __name__ == '__main__':
