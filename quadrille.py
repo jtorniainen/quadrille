@@ -84,17 +84,17 @@ def move_knight(own_position, free_position):
 
 class Piece(object):
     def __init__(self, scr, location, symbol, move_function,
-                 is_queen=False):
+                 is_target=False):
         self.scr = scr
         self.x = location[0]
         self.y = location[1]
         self.location = location
         self.symbol = symbol
         self.move_function = move_function
-        self.is_queen = is_queen
+        self.is_target = is_target
 
     def draw(self, goal_location, offset_x=0, offset_y=0):
-        if self.is_queen:
+        if self.is_target:
             self.scr.addstr(self.location[1] + offset_y,
                             self.location[0] + offset_x,
                             self.symbol,
@@ -112,7 +112,6 @@ class Piece(object):
                             self.symbol,
                             curses.color_pair(3))
 
-
     def move(self, free_position):
         return self.move_function(self.location, free_position)
 
@@ -128,9 +127,11 @@ class ChessBoard(object):
         self.pieces = []
         self.free_space = (0, 0)
         self.goal_location = random.choice([(0, 0), (0, 3), (3, 0), (3, 3)])
+        self.target_location = (1, 1)
 
         self.setup()
-        while self.starting_location == self.goal_location:
+        # Need to make sure game does not start from winning condition
+        while self.target_location == self.goal_location:
             self.setup()
 
     def setup(self):
@@ -140,7 +141,7 @@ class ChessBoard(object):
             for y in range(self.height):
                 locations.append((x, y))
         random.shuffle(locations)
-        self.starting_location = locations[0]
+        self.target_location = locations[0]
         self.pieces.append(Piece(self.scr, locations[0], 'Q', move_queen, True))
         self.pieces.append(Piece(self.scr, locations[1], 'K', move_king))
         self.pieces.append(Piece(self.scr, locations[2], 'K', move_king))
@@ -159,6 +160,12 @@ class ChessBoard(object):
 
         self.free_space = locations[15]
 
+    def check_for_victory(self):
+        if self.target_location == self.goal_location:
+            return True
+        else:
+            return False
+
     def draw_board(self):
         columns = ['a', 'b', 'c', 'd']
         for idx, column_name in enumerate(columns):
@@ -167,6 +174,9 @@ class ChessBoard(object):
             self.scr.addstr(idx + self.offset_y, 0, str(idx), curses.color_pair(4))
         for piece in self.pieces:
             piece.draw(self.goal_location, offset_x=1, offset_y=1)
+
+        if self.free_space == self.goal_location:
+            self.scr.addstr(self.offset_y + self.free_space[1], self.offset_x + self.free_space[0], ' ', curses.color_pair(2))
 
     def move(self, move):
         for idx, piece in enumerate(self.pieces):
@@ -178,6 +188,8 @@ class ChessBoard(object):
             old_free_space = self.free_space
             self.free_space = self.pieces[idx].location
             self.pieces[idx].location = old_free_space
+            if piece.is_target:
+                self.target_location = self.pieces[idx].location
 
     def move2(self, move):
         for idx, piece in enumerate(self.pieces):
@@ -216,16 +228,6 @@ def parse_move(move):
     return column, row
 
 
-def check_for_victory(board):
-    for piece in board.pieces:
-        if piece.is_queen:
-            break
-    if piece.location == board.goal_location:
-        return True
-    else:
-        return False
-
-
 def main(scr):
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLUE)
@@ -240,15 +242,17 @@ def main(scr):
         board.draw_board()
         time.sleep(.5)
         scr.addstr(5, 0, '>')
-        move_str = scr.getstr(5, 1, 2).decode(encoding='utf-8')
-        move = parse_move(move_str)
-        if move:
-            board.move(move)
-        else:
-            popup(scr, 'Invalid move!')
-        if check_for_victory(board):
+        if board.check_for_victory():
+            time.sleep(2)
             popup(scr, 'YOU ARE VICTORY!')
             running = False
+        else:
+            move_str = scr.getstr(5, 1, 2).decode(encoding='utf-8')
+            move = parse_move(move_str)
+            if move:
+                board.move(move)
+            else:
+                popup(scr, 'Invalid move!')
 
         scr.refresh()
 
