@@ -3,14 +3,6 @@ import time
 import random
 
 
-def popup(scr, message_string):
-    scr.clear()
-    scr.border(0)
-    scr.addstr(1, 1, message_string)
-    scr.refresh()
-    scr.getch()
-
-
 def move_queen(own_position, free_position):
     x = own_position[0]
     y = own_position[1]
@@ -83,6 +75,7 @@ def move_knight(own_position, free_position):
 
 
 class Piece(object):
+
     def __init__(self, scr, location, symbol, move_function,
                  is_target=False):
         self.scr = scr
@@ -93,30 +86,12 @@ class Piece(object):
         self.move_function = move_function
         self.is_target = is_target
 
-    def draw(self, goal_location, offset_x=0, offset_y=0):
-        if self.is_target:
-            self.scr.addstr(self.location[1] + offset_y,
-                            self.location[0] + offset_x,
-                            self.symbol,
-                            curses.color_pair(1))
-
-        elif self.location == goal_location:
-            self.scr.addstr(self.location[1] + offset_y,
-                            self.location[0] + offset_x,
-                            self.symbol,
-                            curses.color_pair(2))
-
-        else:
-            self.scr.addstr(self.location[1] + offset_y,
-                            self.location[0] + offset_x,
-                            self.symbol,
-                            curses.color_pair(3))
-
     def move(self, free_position):
         return self.move_function(self.location, free_position)
 
 
 class ChessBoard(object):
+
     def __init__(self, scr):
         self.scr = scr
         self.width = 4
@@ -166,19 +141,8 @@ class ChessBoard(object):
         else:
             return False
 
-    def draw_board(self):
-        columns = ['a', 'b', 'c', 'd']
-        for idx, column_name in enumerate(columns):
-            self.scr.addstr(0, idx + self.offset_x, column_name, curses.color_pair(4))
-        for idx in range(self.height):
-            self.scr.addstr(idx + self.offset_y, 0, str(idx), curses.color_pair(4))
-        for piece in self.pieces:
-            piece.draw(self.goal_location, offset_x=1, offset_y=1)
-
-        if self.free_space == self.goal_location:
-            self.scr.addstr(self.offset_y + self.free_space[1], self.offset_x + self.free_space[0], ' ', curses.color_pair(2))
-
     def move(self, move):
+        # TODO: make it easier to lookup piece locations, some kind of table?
         for idx, piece in enumerate(self.pieces):
             if move == piece.location:
                 break
@@ -191,16 +155,41 @@ class ChessBoard(object):
             if piece.is_target:
                 self.target_location = self.pieces[idx].location
 
-    def move2(self, move):
-        for idx, piece in enumerate(self.pieces):
-            if move == piece.location:
-                break
-        is_valid_move = piece.move(self.free_space)
 
-        if is_valid_move:
-            old_free_space = self.free_space
-            self.free_space = piece.location
-            piece = old_free_space
+def popup(scr, message_string):
+    scr.clear()
+    scr.border(0)
+    scr.addstr(1, 1, message_string)
+    scr.refresh()
+    scr.getch()
+
+
+def draw_board(scr, board):
+    columns = ['a', 'b', 'c', 'd']
+    for idx, column_name in enumerate(columns):
+        scr.addstr(0, idx + board.offset_x, column_name, curses.color_pair(4))
+    for idx in range(board.height):
+        scr.addstr(idx + board.offset_y, 0, str(idx), curses.color_pair(4))
+    for piece in board.pieces:
+        if piece.is_target:
+            color = curses.color_pair(1)
+        elif piece.location == board.goal_location:
+            color = curses.color_pair(2)
+        else:
+            color = curses.color_pair(3)
+
+        scr.addstr(
+            board.offset_y +
+            piece.location[1],
+            board.offset_x +
+            piece.location[0],
+            piece.symbol,
+            color)
+
+    if board.free_space == board.goal_location:
+        scr.addstr(board.offset_y + board.free_space[1],
+                   board.offset_x + board.free_space[0],
+                   ' ', curses.color_pair(2))
 
 
 def parse_move(move):
@@ -239,7 +228,7 @@ def main(scr):
     running = True
     while running:
         scr.clear()
-        board.draw_board()
+        draw_board(scr, board)
         time.sleep(.5)
         scr.addstr(5, 0, '>')
         if board.check_for_victory():
