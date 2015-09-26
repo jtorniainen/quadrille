@@ -1,3 +1,8 @@
+#!/usr/env python3
+
+# Jari Torniainen 2015
+# MIT License (see LICENSE for details)
+
 import curses
 import time
 import random
@@ -75,6 +80,7 @@ def move_knight(own_position, free_position):
 
 
 class Piece(object):
+    """ Container class for pieces (location, symbol, etc) """
 
     def __init__(self, scr, location, symbol, move_function,
                  is_target=False):
@@ -100,14 +106,7 @@ class ChessBoard(object):
         self.offset_y = 1
 
         self.pieces = []
-        self.free_space = (0, 0)
-        self.goal_location = random.choice([(0, 0), (0, 3), (3, 0), (3, 3)])
-        self.target_location = (1, 1)
-
-        self.setup()
-        # Need to make sure game does not start from winning condition
-        while self.target_location == self.goal_location:
-            self.setup()
+        self.reset()
 
     def setup(self):
         locations = []
@@ -155,6 +154,16 @@ class ChessBoard(object):
             if piece.is_target:
                 self.target_location = self.pieces[idx].location
 
+    def reset(self):
+        self.free_space = (0, 0)
+        self.goal_location = random.choice([(0, 0), (0, 3), (3, 0), (3, 3)])
+        self.target_location = (1, 1)
+
+        self.setup()
+        # Need to make sure game does not start from winning condition
+        while self.target_location == self.goal_location:
+            self.setup()
+
 
 def popup(scr, message_string):
     scr.clear()
@@ -167,9 +176,11 @@ def popup(scr, message_string):
 def draw_board(scr, board):
     columns = ['a', 'b', 'c', 'd']
     for idx, column_name in enumerate(columns):
-        scr.addstr(0, idx + board.offset_x, column_name, curses.color_pair(4))
+        scr.addstr(0, idx + board.offset_x + 1, column_name, curses.color_pair(4))
+        scr.addstr(board.offset_y + 2 + board.height, idx + board.offset_x + 1, column_name, curses.color_pair(4))
     for idx in range(board.height):
-        scr.addstr(idx + board.offset_y, 0, str(idx), curses.color_pair(4))
+        scr.addstr(idx + board.offset_y + 1, 0, str(idx), curses.color_pair(4))
+        scr.addstr(idx + board.offset_y + 1, board.offset_x + 2 + board.height, str(idx), curses.color_pair(4))
     for piece in board.pieces:
         if piece.is_target:
             color = curses.color_pair(1)
@@ -179,16 +190,16 @@ def draw_board(scr, board):
             color = curses.color_pair(3)
 
         scr.addstr(
-            board.offset_y +
+            board.offset_y + 1 +
             piece.location[1],
-            board.offset_x +
+            board.offset_x + 1 +
             piece.location[0],
             piece.symbol,
             color)
 
     if board.free_space == board.goal_location:
-        scr.addstr(board.offset_y + board.free_space[1],
-                   board.offset_x + board.free_space[0],
+        scr.addstr(board.offset_y  + 1 +board.free_space[1],
+                   board.offset_x + 1 + board.free_space[0],
                    ' ', curses.color_pair(2))
 
 
@@ -230,13 +241,13 @@ def main(scr):
         scr.clear()
         draw_board(scr, board)
         time.sleep(.5)
-        scr.addstr(5, 0, '>')
+        scr.addstr(8, 0, '>')
         if board.check_for_victory():
-            time.sleep(2)
+            time.sleep(.5)
             popup(scr, 'YOU ARE VICTORY!')
-            running = False
+            board.reset()
         else:
-            move_str = scr.getstr(5, 1, 2).decode(encoding='utf-8')
+            move_str = scr.getstr(8, 1, 2).decode(encoding='utf-8')
             move = parse_move(move_str)
             if move:
                 board.move(move)
