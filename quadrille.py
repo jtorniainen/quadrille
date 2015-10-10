@@ -155,6 +155,7 @@ class ChessBoard(object):
                 self.target_location = self.pieces[idx].location
 
     def reset(self):
+        """ Sets the pieces on the board. """
         self.free_space = (0, 0)
         self.goal_location = random.choice([(0, 0), (0, 3), (3, 0), (3, 3)])
         self.target_location = (1, 1)
@@ -168,7 +169,11 @@ class ChessBoard(object):
 def popup(scr, message_string):
     scr.clear()
     scr.border(0)
-    scr.addstr(1, 1, message_string)
+    if type(message_string) == list:
+        for row, message in enumerate(message_string):
+            scr.addstr(row + 1, 1, message)
+    else:
+        scr.addstr(1, 1, message_string)
     scr.refresh()
     scr.getch()
 
@@ -236,6 +241,9 @@ def main(scr):
     board = ChessBoard(scr)
     curses.echo()
 
+    time_started = time.time()
+    moves = 0
+
     running = True
     while running:
         scr.clear()
@@ -244,12 +252,19 @@ def main(scr):
         scr.addstr(8, 0, '>')
         if board.check_for_victory():
             time.sleep(.5)
-            popup(scr, 'YOU ARE VICTORY!')
+            victory_msg = []
+            victory_msg.append('YOU ARE VICTORY!')
+            victory_msg.append(' Moves: {}'.format(moves))
+            victory_msg.append(' Time: {}'.format(round(time.time() - time_started)))
+            popup(scr, victory_msg)
             board.reset()
+            moves = 0
+            time_started = time.time()
         else:
             move_str = scr.getstr(8, 1, 2).decode(encoding='utf-8')
             move = parse_move(move_str)
             if move:
+                moves += 1
                 board.move(move)
             else:
                 popup(scr, 'Invalid move!')
