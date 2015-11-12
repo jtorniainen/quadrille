@@ -31,7 +31,11 @@ def move_king(own_position, free_position):
     possible_positions = [(x + 1, y),
                           (x - 1, y),
                           (x, y + 1),
-                          (x, y - 1)]
+                          (x, y - 1),
+                          (x + 1, y + 1),
+                          (x + 1, y - 1),
+                          (x - 1, y + 1),
+                          (x - 1, y - 1)]
     if free_position in possible_positions:
         return True
     else:
